@@ -1,3 +1,18 @@
+# Instructions for running as service
+
+1. Copy the file to systemd:
+sudo cp /home/james/repos/Personal/pir-camera-case/security-camera.service /etc/systemd/system/
+
+2. Reload systemd:
+sudo systemctl daemon-reload
+
+3. Enable the service:
+sudo systemctl enable security-camera.service
+
+4. Start the service (or reboot to test)
+sudo systemctl start security-camera.service
+
+
 # Raspberry Pi PIR Camera Case
 
 *Repository containing setup, code and Python script examples for the Raspberry Pi PIR Camera Case from The Pi Hut*
