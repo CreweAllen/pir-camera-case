@@ -19,7 +19,7 @@ try:
 		if GPIO.input(PIR_PIN):
 			print("Motion Detected!")
 			timestamp = time.strftime("%Y%m%d-%H%M%S")
-			video_name = f'/home/james/Videos/security-camera/VID_{timestamp}.mp4'
+			video_name = f'/home/james/Programs/security-camera-output/VID_{timestamp}.mp4'
 			#picam2.start_recording(encoder="libx264", output=video_name)
 			#time.sleep(10)
 			#picam2.stop_recording()

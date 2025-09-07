@@ -20,7 +20,7 @@ try:
 			print("Motion Detected!")
 			
 			timestamp = time.strftime("%Y%m%d-%H%M%S")
-			image_name = f'/home/james/Videos/security-camera/IMG_{timestamp}.jpg'
+			image_name = f'/home/james/Programs/security-camera-output/IMG_{timestamp}.jpg'
 
 			picam2.capture_file(image_name)
 
