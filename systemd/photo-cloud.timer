@@ -1,0 +1,13 @@
+[Unit]
+Description=Scheduled photo capture and cloud upload
+Requires=photo-cloud.service
+
+[Timer]
+# Run at 09:00, 12:00, and 18:00 every day
+OnCalendar=*-*-* 09:00:00
+OnCalendar=*-*-* 12:00:00
+OnCalendar=*-*-* 18:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

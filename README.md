@@ -1,100 +1,338 @@
-# Instructions for running as service
+# Security Camera with Cloud Upload
 
-1. Copy the file to systemd:
-sudo cp /home/james/repos/Personal/pir-camera-case/security-camera.service /etc/systemd/system/
+This guide explains how to set up and run the PIR motion-sensing camera with automatic photo upload to Azure Functions.
 
-2. Reload systemd:
-sudo systemctl daemon-reload
+## Overview
 
-3. Enable the service:
-sudo systemctl enable security-camera.service
+The cloud-enabled scripts extend the basic motion-sensing camera functionality by automatically uploading captured photos to an Azure Function endpoint via HTTP PUT requests. This enables cloud storage, processing, and remote access to captured images.
 
-4. Start the service (or reboot to test)
-sudo systemctl start security-camera.service
+## Project Structure
 
-
-# Raspberry Pi PIR Camera Case
-
-*Repository containing setup, code and Python script examples for the Raspberry Pi PIR Camera Case from The Pi Hut*
-***
-The PIR Camera Case ([Pi 4](https://thepihut.com/products/pir-camera-case-for-raspberry-pi-4-3) / Pi Zero *(Coming soon)*) is a case designed to hold your Raspberry Pi, an Official Raspberry Pi Camera Module and the included PIR sensor. The case is also compatible with [these wall mounts](https://thepihut.com/products/camera-box-wall-mount).
-
-When used together, you have a great foundation for an indoors Raspberry Pi motion-sensing camera project. Combine with [MotionEyeOS](https://github.com/ccrisan/motioneyeos/wiki) for a superb Raspberry Pi IP surveillance system!
-
-![PIR Camera Case](/images/PIR-Camera-Case-2.jpg)
-
-This repository will show you how to [prepare your Raspberry Pi](#prepare-your-raspberry-pi), give you some [example code](#example-code) to get you started (including how to [download this code straight to your Raspberry Pi](#downloading-example-code)).
-
-## Prepare your Raspberry Pi
-
-**Operating System**
-
-We recommend the [Raspberry Pi OS](https://www.raspberrypi.org/downloads/) for this project/case, and this guide assumes you have the basic operating system loaded and ready.
-You can also use other systems such as [MotionEyeOS](https://github.com/ccrisan/motioneyeos/wiki) for a live video surveillance style system.
-
-**Case Assembly**
-
-You will need to have [assembled the case](https://thepihut.com/blogs/raspberry-pi-tutorials/pir-camera-case-assembly-instructions) which includes connecting the Camera Module and PIR sensor.
-
-**Enable the Camera Interface**
-
-We need to make sure your Raspberry Pi is configured to use the Camera Module to enable it to take photos/videos when instructed by our code.
-
-We will enable the camera interface by opening a new terminal window and entering:
-```bash
-sudo raspi-config
 ```
-This will show a screen similar to this:
-
-![Raspi-Config](images/raspi-config-screen.jpg)
-
-Now simply select '**Interfacing Options**', '**Camera**' then '**Yes**' to enable the camera interface. Reboot your Raspberry Pi when prompted.
-
-**Test the Camera**
-
-Run a quick test before proceeding. With your Raspberry Pi connected to a monitor via a HDMI cable, in a terminal window enter the following command to take a quick basic picture with the camera:
-```bash
-raspistill -o test.jpg
+pir-camera-case/
+├── camera/                    # Core library modules
+│   ├── config.py             # Configuration management
+│   ├── sensor.py             # PIR sensor control
+│   ├── capture.py            # Camera operations
+│   ├── uploader.py           # Cloud upload functionality
+│   └── utils.py              # Utility functions
+├── scripts/                   # Executable scripts
+│   ├── photo_motion.py       # Local photo capture (motion-triggered)
+│   ├── video_motion.py       # Local video capture (motion-triggered)
+│   ├── cloud_motion.py       # Cloud photo upload (motion-triggered)
+│   └── cloud_scheduled.py    # Cloud photo upload (scheduled)
+├── systemd/                   # Service configuration
+│   ├── photo-cloud.service   # Systemd service
+│   └── photo-cloud.timer     # Timer for scheduled runs
+└── requirements.txt           # Python dependencies
 ```
-If you don't see an image on the screen, check the camera connection, re-fit the cable if necessary, reboot and try again.
 
-**Adjust PIR sensitivity**
+## Features
 
-PIR modules are usually set to half sensitivity out of the bag via the right-hand dial seen in the image below:
+- **Motion Detection**: Uses PIR sensor to detect movement
+- **Automatic Photo Capture**: Takes photos when motion is detected using Picamera2
+- **Cloud Upload**: Automatically uploads images to Azure Functions
+- **Temporary File Handling**: Uses temporary files for efficient memory management
+- **Configurable**: Environment variables for easy deployment configuration
+- **Function Key Support**: Optional Azure Function authentication
 
-![PIR Sensitivity](https://github.com/ThePiHut/pir-camera-case/blob/master/images/PIR-settings.jpg)
+## Prerequisites
 
-This can be a little too sensitive depending on the conditions your project will be in. If you experience excessive false triggers, open the top of your case and try turning the right dial anti-clockwise and testing different levels of sensitivity. Heat, WiFi and other interference can also produce false triggers
+- Raspberry Pi with Camera Module and PIR sensor (assembled in PIR Camera Case)
+- Python 3
+- Required Python packages (see [Installation](#installation))
+- Azure Function App configured to receive image uploads (or compatible HTTP endpoint)
 
-## Example Code
+## Installation
 
-We have added examples below showing you how to control the individual components, alongside a combined code example showing a full motion-sensing camera project.
+1. **Clone/Download the Repository** (if not already done):
+```bash
+git clone https://github.com/ThePiHut/pir-camera-case
+cd pir-camera-case
+```
 
-Remember: PIR sensors can be temperamental (and can be impacted by WiFi, heat and other interference) so will need some [tweaking](https://github.com) to avoid excessive false triggers.
+2. **Install Required Python Packages**:
+```bash
+pip install -r requirements.txt
+```
 
-**Controlling individual components**
-- [Simple PIR code](https://github.com/ThePiHut/pir-camera-case/tree/master/examples/simple-pir-code)
-- [Basic camera module terminal commands](https://github.com/ThePiHut/pir-camera-case/tree/master/examples/basic-camera-commands)
-- [Using the camera module in a script](https://github.com/ThePiHut/pir-camera-case/tree/master/examples/camera-module-in-script)
+## Configuration
 
-**Motion sensing project example**
-- [PIR + Camera code](https://github.com/ThePiHut/pir-camera-case/tree/master/examples/pir-camera-code)
+The script uses environment variables for configuration. Set these before running:
 
-## Downloading example code
-You can download this entire repository on to your Raspberry Pi (including the example scripts) by following the steps below:
+### Required Environment Variables
 
-In a terminal window, enter the following command:
+- **`BASE_URL`**: The base URL of your Azure Function App
+  ```bash
+  export BASE_URL="https://your-app.azurewebsites.net"
+  ```
 
-```git clone https://github.com/ThePiHut/pir-camera-case```
+### Optional Environment Variables
 
-To enter the cloned repository directory, use:
+- **`PIR_PIN`**: GPIO pin number for PIR sensor (default: 17)
+  ```bash
+  export PIR_PIN="17"
+  ```
 
-```cd pir-camera-case```
+- **`AZURE_FUNCTION_KEY`**: Azure Function authentication key (if required)
+  ```bash
+  export AZURE_FUNCTION_KEY="your-function-key-here"
+  ```
 
-You can then access the example scripts by finding them in their respective directories. For example:
+## Azure Function Endpoint
 
-```cd examples/pir-camera-code```
+The script uploads images to: `{BASE_URL}/api/camera/photo`
 
-If you then use the command ```ls``` to list the contents of that directory, you'll see the code file. You can then, for example, run that file with:
+### Expected Azure Function Behavior
 
-```sudo python videoproject.py```
+Your Azure Function should:
+- Accept HTTP PUT requests
+- Expect `Content-Type: image/jpeg` header
+- Optionally validate `x-functions-key` header for authentication
+- Return HTTP 2xx status on successful upload
+- Handle binary image data in request body
+
+### Example Azure Function (Node.js)
+
+```javascript
+module.exports = async function (context, req) {
+    if (req.method === 'PUT') {
+        const imageBuffer = req.body;
+        const timestamp = new Date().toISOString();
+        
+        // Store to Azure Blob Storage, process, etc.
+        // ... your storage logic here ...
+        
+        context.res = {
+            status: 200,
+            body: { message: "Image uploaded successfully", timestamp }
+        };
+    } else {
+        context.res = {
+            status: 405,
+            body: "Method not allowed"
+        };
+    }
+};
+```
+
+## Running the Scripts
+
+### Manual Execution
+
+**Motion-Detected Mode** (continuous monitoring):
+```bash
+export BASE_URL="https://your-app.azurewebsites.net"
+export AZURE_FUNCTION_KEY="your-key-here"  # Optional
+cd /home/james/repos/Personal/pir-camera-case
+sudo python3 scripts/cloud_motion.py
+```
+
+**Scheduled Mode** (single capture):
+```bash
+export BASE_URL="https://your-app.azurewebsites.net"
+export AZURE_FUNCTION_KEY="your-key-here"  # Optional
+cd /home/james/repos/Personal/pir-camera-case
+sudo python3 scripts/cloud_scheduled.py
+```
+
+### Running as a Scheduled Systemd Service (Recommended)
+
+For scheduled photo captures at specific times (09:00, 12:00, and 18:00 daily), use the timer-based systemd service.
+
+1. **Copy both service and timer files to systemd**:
+   ```bash
+   sudo cp /home/james/repos/Personal/pir-camera-case/systemd/photo-cloud.service /etc/systemd/system/
+   sudo cp /home/james/repos/Personal/pir-camera-case/systemd/photo-cloud.timer /etc/systemd/system/
+   ```
+
+2. **Reload systemd**:
+   ```bash
+   sudo systemctl daemon-reload
+   ```
+
+3. **Enable and start the timer**:
+   ```bash
+   sudo systemctl enable photo-cloud.timer
+   sudo systemctl start photo-cloud.timer
+   ```
+
+4. **Check timer status**:
+   ```bash
+   sudo systemctl status photo-cloud.timer
+   sudo systemctl list-timers photo-cloud.timer
+   ```
+
+5. **View logs**:
+   ```bash
+   sudo journalctl -u photo-cloud.service -f
+   ```
+
+### Running as a Systemd Service (Continuous Motion Detection)
+
+For continuous operation with motion detection, modify the service file:
+
+1. **Edit the service file**:
+   ```bash
+   sudo nano /etc/systemd/system/photo-cloud.service
+   ```
+
+2. **Change to continuous mode**:
+   ```ini
+   [Service]
+   Type=simple
+   ExecStart=/usr/bin/python3 /home/james/repos/Personal/pir-camera-case/scripts/cloud_motion.py
+   Restart=on-failure
+   ```
+
+3. **Reload and start**:
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl enable photo-cloud.service
+   sudo systemctl start photo-cloud.service
+   ```
+
+## How It Works
+
+1. **Initialization**: 
+   - Configures GPIO for PIR sensor (BCM pin 17 by default)
+   - Initializes Picamera2
+   - Reads configuration from environment variables
+
+2. **Main Loop**:
+   - Continuously monitors PIR sensor for motion
+   - When motion detected:
+     - Generates timestamp (format: `YYYYMMDD-HHMMSS`)
+     - Captures image to temporary file
+     - Uploads image to Azure Function via HTTP PUT
+     - Deletes temporary file
+     - Waits 2 seconds before resuming monitoring
+
+3. **Upload Process**:
+   - Creates HTTP PUT request to `{BASE_URL}/api/camera/photo`
+   - Includes image data as binary in request body
+   - Sets `Content-Type: image/jpeg` header
+   - Optionally includes `x-functions-key` for authentication
+   - Times out after 30 seconds
+
+## Troubleshooting
+
+### Upload Failures
+
+**Issue**: Photos not uploading to Azure Function
+
+**Solutions**:
+- Verify `BASE_URL` is correctly set
+- Check network connectivity: `ping your-app.azurewebsites.net`
+- Verify Azure Function is running and accessible
+- Check function key authentication if enabled
+- Review console output for HTTP error messages
+
+### Environment Variables Not Set
+
+**Issue**: Script reports "BASE_URL not configured"
+
+**Solutions**:
+- Export `BASE_URL` before running script
+- Add environment variables to systemd service file
+- Verify variables with: `echo $BASE_URL`
+
+### Permission Errors
+
+**Issue**: GPIO or camera access denied
+
+**Solutions**:
+- Run script with `sudo`
+- Add user to `gpio` and `video` groups:
+  ```bash
+  sudo usermod -a -G gpio,video $USER
+  ```
+- Reboot after adding to groups
+
+### Excessive False Triggers
+
+**Issue**: Too many photos being captured
+
+**Solutions**:
+- Adjust PIR sensitivity dial (see main [README.md](README.md))
+- Increase wait time after capture (modify `time.sleep(2)` in code)
+- Check for heat sources or WiFi interference near sensor
+
+## Security Considerations
+
+- **Function Keys**: Store Azure Function keys securely, don't commit to version control
+- **Network Security**: Use HTTPS endpoints (Azure Functions use HTTPS by default)
+- **Access Control**: Implement proper authentication on your Azure Function
+- **Data Privacy**: Ensure compliance with privacy regulations when capturing/storing images
+
+## Related Files
+
+### Scripts
+- [scripts/cloud_motion.py](scripts/cloud_motion.py) - Motion-triggered cloud upload
+- [scripts/cloud_scheduled.py](scripts/cloud_scheduled.py) - Scheduled cloud upload  
+- [scripts/photo_motion.py](scripts/photo_motion.py) - Local photo capture (motion)
+- [scripts/video_motion.py](scripts/video_motion.py) - Local video capture (motion)
+
+### Library Modules
+- [camera/config.py](camera/config.py) - Configuration management
+- [camera/sensor.py](camera/sensor.py) - PIR sensor control
+- [camera/capture.py](camera/capture.py) - Camera operations
+- [camera/uploader.py](camera/uploader.py) - Cloud upload functionality
+- [camera/utils.cripts/cloud_scheduled.py`
+- **Trigger**: Systemd timer at 09:00, 12:00, 18:00
+- **Use Case**: Regular interval monitoring, lower power consumption
+- **Setup**: Uses `photo-cloud.timer` and `photo-cloud.service`
+
+### Motion Detection Mode (Continuous)
+- **Script**: `scripts/cloud_motion.py`
+- **Trigger**: PIR motion sensor
+- **Use Case**: Security monitoring, event-driven captures
+- **Setup**: Uses `photo-cloud.service`
+## Operation Modes
+
+### Scheduled Mode (Timer-Based)
+- **Script**: `security-camera-photo-cloud-scheduled.py`
+- **Trigger**: Systemd timer at 09:00, 12:00, 18:00
+- **Use Case**: Regular interval monitoring, lower power consumption
+- **Setup**: Uses `.timer` and `.service` files
+
+### Motion Detection Mode (Continuous)
+- **Script**: `security-camera-photo-cloud.py`
+- **Trigger**: PIR motion sensor
+- **Use Case**: Security monitoring, event-driven captures
+- **Setup**: Uses `.service` file with `Type=simple` and `Restart=on-failure`
+
+## Differences from Local-Only Scripts
+
+| Feature | Cloud Upload | Local Only |
+|---------|-------------|------------|
+| Storage | Azure Function/Cloud | Local filesystem |
+| Configuration | Environment variables | Hardcoded paths |
+| Dependencies | `requests` library | None (only GPIO/picamera) |
+| File Management | Temporary files (auto-deleted) | Permanent files with timestamp |
+| Network Required | Yes | No |
+| Remote Access | Yes (via cloud) | No |
+
+## Example Output
+
+```
+Ready
+Motion Detected!
+Uploaded photo 20251222-143052 -> https://your-app.azurewebsites.net/api/camera/photo (status 200)
+Ready
+Motion Detected!
+Uploaded photo 20251222-143108 -> https://your-app.azurewebsites.net/api/camera/photo (status 200)
+Ready
+^CQuit
+```
+
+## License
+
+This project follows the same license as the main PIR Camera Case repository.
+
+## Support
+
+For issues specific to:
+- **PIR Camera Case hardware**: See main [README.md](README.md)
+- **Azure Functions**: Consult [Azure Functions documentation](https://docs.microsoft.com/azure/azure-functions/)
+- **This script**: Open an issue in the repository

@@ -1,0 +1,14 @@
+[Unit]
+Description=Scheduled photo capture and cloud upload service
+After=network.target
+
+[Service]
+Type=oneshot
+User=james
+WorkingDirectory=/home/james/repos/Personal/pir-camera-case
+ExecStart=/usr/bin/python3 /home/james/repos/Personal/pir-camera-case/scripts/cloud_scheduled.py
+Environment="BASE_URL=https://creweallen-function.azurewebsites.net"
+Environment="AZURE_FUNCTION_KEY="
+
+[Install]
+WantedBy=multi-user.target

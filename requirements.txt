@@ -1,0 +1,11 @@
+# Security Camera Dependencies
+# Install with: pip install -r requirements.txt
+
+# GPIO control for Raspberry Pi
+RPi.GPIO>=0.7.0
+
+# Camera control (Raspberry Pi Camera Module)
+picamera2>=0.3.0
+
+# HTTP requests for cloud upload
+requests>=2.28.0
