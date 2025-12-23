@@ -34,7 +34,7 @@ def capture_and_upload():
         success = uploader.upload_image(temp_path, timestamp)
         if success:
             print(f"✓ Successfully uploaded photo at {timestamp}")
-        else:
+        else:            
             print(f"✗ Failed to upload photo at {timestamp}")
         
         return success

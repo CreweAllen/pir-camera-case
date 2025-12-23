@@ -4,7 +4,8 @@ Requires=photo-cloud.service
 
 [Timer]
 # Run at 09:00, 12:00, and 18:00 every day
-OnCalendar=*-*-* 09:00:00
+OnCalendar=*-*-* 00:0:00
+OnCalendar=*-*-* 06:00:00
 OnCalendar=*-*-* 12:00:00
 OnCalendar=*-*-* 18:00:00
 Persistent=true

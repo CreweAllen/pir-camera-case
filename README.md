@@ -1,3 +1,15 @@
+# Run Services on PI start
+Start the service
+`sudo systemctl start photo-cloud.timer`
+Restart the service
+`sudo systemctl restart photo-cloud.timer`
+Stop the service
+`sudo systemctl stop photo-cloud.timer`
+Stop the on boot timer service
+`sudo systemctl disable photo-cloud.timer`
+Start the on boot timer service
+`sudo systemctl enable photo-cloud.timer`
+
 # Security Camera with Cloud Upload
 
 This guide explains how to set up and run the PIR motion-sensing camera with automatic photo upload to Azure Functions.
