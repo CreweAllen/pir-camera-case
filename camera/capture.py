@@ -10,6 +10,14 @@ class Camera:
     def __init__(self):
         """Initialize camera and start preview."""
         self.picam2 = Picamera2()
+        # Configure for maximum resolution (4608x2592)
+        """
+        1536x864 @ 120 fps
+        2304x1296 @ 56 fps
+        4608x2592 @ 14 fps
+        """
+        config = self.picam2.create_still_configuration(main={"size": (4608, 2592)})
+        self.picam2.configure(config)
         self.picam2.start()
     
     def capture_photo(self, filepath):

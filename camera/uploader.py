@@ -6,7 +6,7 @@ import requests
 class CloudUploader:
     """Handles uploading images to cloud endpoints."""
     
-    def __init__(self, base_url, headers=None, website_id="cotmarshtannery", camera_name="Security1"):
+    def __init__(self, base_url, headers=None, website_id="cotmarshtannery", camera_name="Security-1"):
         """
         Initialize cloud uploader.
         
